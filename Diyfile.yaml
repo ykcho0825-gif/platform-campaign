@@ -1,0 +1,54 @@
+apiVersion: diy.platform.io/v1alpha1
+kind: DiyConfig
+metadata:
+  name: campaign-dashboard0-v2-4
+  title: campaign-dashboard0-v2-4
+  annotations:
+    pg.io/icon: 📊
+    playground.io/reconcile-at: 2026-09-01T14:34:47Z
+spec:
+  lifecycle: active
+  project:
+    category: service
+    type: service
+    language: javascript
+    framework: express
+    version: 5.2.1
+    description: 미디어 타겟 마케팅 실적 조회용 대시보드
+  build:
+    runtime: nodejs
+    version: 24-trixie-slim
+    port: 3000
+    entrypoint:
+      - node
+      - server/index.js
+    # Health Check
+    healthCheck:
+      liveness:
+        path: /healthz
+        port: 3000
+        initialDelaySeconds: 30
+        periodSeconds: 10
+      readiness:
+        path: /ready
+        port: 3000
+        initialDelaySeconds: 10
+        periodSeconds: 5
+  deploy:
+    environment: dev
+    replicas: 1
+    strategy: Recreate
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+    ingress:
+      enabled: true
+      path: /
+    secrets:
+      - secretName: ldas-credentials
+      - secretName: ldas-db-credentials
+      - secretName: power-automate-webhook

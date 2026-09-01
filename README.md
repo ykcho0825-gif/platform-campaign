@@ -1,311 +1,79 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>캠페인 스케쥴링 시스템</title>
-    <style>
-        :root {
-            --primary: #2563eb;
-            --bg: #ffffff;
-            --gray-light: #f8fafc;
-            --gray-inactive: #e2e8f0;
-            --border: #e2e8f0;
-            --text: #1e293b;
-            --input-bg: #f1f5f9; 
-            --input-focus-bg: #e2e8f0;
-            --button-default-bg: #ffffff;
-            --button-default-text: #000000;
-            --button-active-bg: #cbd5e1;
-        }
+# campaign-dashboard0-v2-4
 
-        body {
-            font-family: 'Pretendard', -apple-system, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
+React + Vite + Typescript SPA 애플리케이션입니다.
 
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 40px;
-            border-bottom: 1px solid var(--border);
-            background: #fff;
-        }
+## 바로가기
 
-        .logo { font-weight: 800; font-size: 1.4rem; color: #000; }
+- [Playground 앱 상세 페이지](https://playground.skbroadband.com/apps/web-services/default/campaign-dashboard0-v2-4)
+- [배포된 앱](https://pg-apps.skbroadband.com/campaign-dashboard0-v2-4)
 
-        .main-tabs { display: flex; gap: 10px; }
-        .main-tab-btn {
-            padding: 12px 28px;
-            border: none;
-            background-color: var(--gray-inactive);
-            cursor: pointer;
-            border-radius: 8px;
-            font-weight: 600;
-            color: #64748b;
-            transition: all 0.2s ease;
-        }
-        .main-tab-btn.active { background-color: #000000; color: #ffffff; }
+---
 
-        .sub-nav { display: flex; padding: 25px 40px 0; gap: 25px; }
-        .sub-tab-btn {
-            padding: 10px 5px; border: none; background: none; cursor: pointer;
-            font-size: 1.1rem; color: #94a3b8; border-bottom: 3px solid transparent;
-        }
-        .sub-tab-btn.active { color: var(--primary); border-bottom: 3px solid var(--primary); font-weight: 700; }
+## 🔗 마이크로서비스 통신 가이드 (내부 네트워크)
 
-        .container { padding: 30px 40px; flex: 1; overflow-y: auto; }
+Kubernetes 내부 네트워크에서 다른 앱이 **현재 생성된 이 앱(campaign-dashboard0-v2-4)**에 접근할 때 사용하는 내부 DNS 주소입니다.
 
-        .card {
-            background: #fff; border: 1px solid var(--border); border-radius: 16px;
-            padding: 35px; max-width: 1000px; box-shadow: 0 4px 12px rgba(0,0,0,0.03);
-        }
+| 접근 주체 | 연결 주소(URL) |
+| :--- | :--- |
+| **같은 프로젝트(team-campaign-dashboard-v2) 내의 다른 앱** | `http://dev-campaign-dashboard0-v2-4:8080` |
+| **타 프로젝트(Namespace)의 다른 앱** | `http://dev-campaign-dashboard0-v2-4.team-campaign-dashboard-v2.svc.cluster.local:8080` |
 
-        .grid-form { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
-        .form-group { display: flex; flex-direction: column; gap: 10px; }
-        label { font-size: 0.85rem; font-weight: 700; color: #475569; margin-left: 4px; }
+> 💡 **환경별 서비스명 접두사 (Prefix)**
+> 배포 환경에 따라 서비스 이름 앞에 환경 이름이 붙습니다. 
+> - 개발(Dev) 환경: `dev-campaign-dashboard0-v2-4`
+> - 운영(Prod) 환경: `campaign-dashboard0-v2-4` (접두사 없음)
+> - 기타 환경: `{환경명}-campaign-dashboard0-v2-4`
 
-        input, select {
-            padding: 14px;
-            border: none;
-            border-radius: 12px;
-            background-color: var(--input-bg);
-            font-family: inherit;
-            font-size: 14px;
-            color: var(--text);
-            transition: background-color 0.2s;
-        }
-        input:focus, select:focus {
-            outline: none;
-            background-color: var(--input-focus-bg);
-        }
+### ⚙️ Kubernetes 추천 세팅 가이드
+* **환경 변수(Env) 활용:** 다른 앱의 URL이나 DB 접속 정보는 소스코드에 하드코딩하지 말고, 플랫폼의 **Secret Manager**를 통해 환경 변수로 주입받도록 구성하세요 (`process.env.DB_HOST` 등 활용).
+* **Health Check API:** Kubernetes가 앱의 상태를 주기적으로 체크할 수 있도록, 상태 반환 엔드포인트(예: `GET /healthz`)를 열어두는 것이 무중단 배포 안정성에 도움이 됩니다.
+* **Graceful Shutdown:** SIGTERM 신호를 받았을 때 진행 중인 요청을 안전하게 마무리하고 종료되도록 코드를 작성하는 것을 권장합니다.
 
-        .number-input { text-align: center; }
+---
 
-        .btn-submit {
-            grid-column: span 2;
-            background-color: var(--button-default-bg);
-            color: var(--button-default-text);
-            border: 2px solid #000000;
-            padding: 18px; border-radius: 12px; cursor: pointer;
-            font-weight: 700; font-size: 1.1rem; margin-top: 10px;
-            transition: all 0.2s ease;
-        }
-        .btn-submit:hover { background-color: #f3f4f6; }
-        .btn-submit.submitted {
-            background-color: var(--button-active-bg) !important;
-            color: #000 !important; border-color: #94a3b8 !important; cursor: default;
-        }
+## VSCode Server에서 미리보기
 
-        .assign-tool { display: flex; gap: 8px; align-items: center; }
-        .btn-confirm { background: #10b981; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; }
+웹 IDE(code-server)에서 dev 서버는 sub-path(`/<워크스페이스>/absproxy/<port>`)로 노출됩니다.
+링크·정적자산이 깨지지 않게 그 경로를 `BASE_PATH`로 알려줘야 하며, 워크스페이스에 사전 설치된
+`dev-preview`가 자동 처리합니다. (vite `base`의 끝 `/`는 설정 파일에서 자동 보정)
 
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 15px; border-bottom: 1px solid var(--border); text-align: left; }
-        th { background: var(--gray-light); }
+**방법 1 — `dev-preview` (권장)**: 포트와 실행명령만 주면 base path를 자동 주입합니다.
 
-        /* 캘린더 스타일 */
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-        .cal-day { min-height: 130px; padding: 10px; border: 0.5px solid var(--border); background: #fff; }
-        .cal-header { font-weight: bold; background: var(--gray-light); height: 45px; display: flex; align-items: center; justify-content: center; }
-        
-        /* 캘린더 태그 스타일 수정: 한 줄 표기 및 랜덤 블루톤 대비 */
-        .event-tag { 
-            font-size: 0.75rem; 
-            padding: 6px 10px; 
-            border-radius: 6px; 
-            margin-top: 4px; 
-            white-space: nowrap;      /* 한 줄 유지 */
-            overflow: hidden;         /* 넘치는 글자 숨김 */
-            text-overflow: ellipsis;  /* 말줄임표 적용 */
-            display: block;
-            border-left: 4px solid rgba(0,0,0,0.2);
-            color: #fff;              /* 블루톤 대비 흰색 글자 */
-            font-weight: 500;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        }
+```bash
+dev-preview 5173 npm run dev
+```
 
-        .hidden { display: none; }
-    </style>
-</head>
-<body>
+**방법 2 — 직접 설정**: 헬퍼 없이, 프리뷰 주소창의 **전체 경로**를 `BASE_PATH`로 지정합니다.
 
-    <header>
-        <div class="logo">캠페인 스케쥴링</div>
-        <div class="main-tabs">
-            <button id="main-user-btn" class="main-tab-btn active" onclick="switchMainTab('user')">사용자</button>
-            <button id="main-admin-btn" class="main-tab-btn" onclick="switchMainTab('admin')">관리자</button>
-        </div>
-    </header>
+```bash
+BASE_PATH=/<워크스페이스>/absproxy/5173 npm run dev
+```
 
-    <div id="user-section">
-        <div class="sub-nav">
-            <button class="sub-tab-btn active" onclick="switchSubTab('user', 'apply')">캠페인 신청</button>
-            <button class="sub-tab-btn" onclick="switchSubTab('user', 'calendar')">캠페인 캘린더</button>
-        </div>
-        <div class="container">
-            <div id="user-apply" class="sub-content card">
-                <form id="campaignForm" class="grid-form">
-                    <div class="form-group"><label>캠페인 명</label><input type="text" id="name" placeholder="캠페인 제목"></div>
-                    <div class="form-group">
-                        <label>타겟 채널</label>
-                        <div style="display:flex; gap:15px; padding-top:10px;">
-                            <label><input type="checkbox" name="channel" value="SEG"> SEG</label>
-                            <label><input type="checkbox" name="channel" value="토스트"> 토스트</label>
-                            <label><input type="checkbox" name="channel" value="TV"> TV</label>
-                        </div>
-                    </div>
-                    <div class="form-group"><label>캠페인 시작일</label><input type="date" id="startDate"></div>
-                    <div class="form-group"><label>캠페인 종료일</label><input type="date" id="endDate"></div>
-                    <div class="form-group"><label>GNB</label><input type="text" id="gnb" placeholder="GNB 위치"></div>
-                    <div class="form-group">
-                        <label>주기성 여부</label>
-                        <select id="periodic"><option value="N">아니오</option><option value="Y">예</option></select>
-                    </div>
-                    <div class="form-group"><label>타겟 수</label><input type="text" id="targetCount" class="number-input" onkeyup="inputNumberFormat(this)" placeholder="0"></div>
-                    <div class="form-group"><label>SEG ID 수</label><input type="text" id="segCount" class="number-input" onkeyup="inputNumberFormat(this)" placeholder="0"></div>
-                    <div class="form-group"><label>부서</label><input type="text" id="dept" placeholder="부서명"></div>
-                    <div class="form-group"><label>마케터</label><input type="text" id="marketer" placeholder="담당자 성함"></div>
-                    <button type="button" id="submitBtn" class="btn-submit" onclick="handleApply()">신청하기</button>
-                </form>
-            </div>
-            <div id="user-calendar" class="sub-content hidden">
-                <div class="calendar-grid" id="calendarBody"></div>
-            </div>
-        </div>
-    </div>
+- **prod 빌드 시엔 미설정** — `serviceName` 기반 base가 자동 적용됩니다
 
-    <div id="admin-section" class="hidden">
-        <div class="sub-nav">
-            <button class="sub-tab-btn active" onclick="switchSubTab('admin', 'assign')">캠페인 일정 배정</button>
-            <button class="sub-tab-btn" onclick="switchSubTab('admin', 'list')">배정 완료 목록</button>
-        </div>
-        <div class="container">
-            <div id="admin-assign" class="sub-content card">
-                <table>
-                    <thead><tr><th>캠페인명</th><th>마케터</th><th>희망 기간</th><th>배정 시간 설정</th></tr></thead>
-                    <tbody id="adminWaitList"></tbody>
-                </table>
-            </div>
-            <div id="admin-list" class="sub-content hidden card">
-                <table>
-                    <thead><tr><th>확정 캠페인명</th><th>배정 시간</th><th>기간</th><th>마케터</th></tr></thead>
-                    <tbody id="adminDoneList"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+---
 
-    <script>
-        let campaigns = [];
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('startDate').value = today;
-        document.getElementById('endDate').value = today;
+## 기술 스택
 
-        // 블루 계열의 랜덤 색상 생성 함수
-        function getRandomBlue() {
-            const blues = [
-                '#3b82f6', '#2563eb', '#1d4ed8', '#1e40af', 
-                '#60a5fa', '#0ea5e9', '#0284c7', '#0369a1',
-                '#6366f1', '#4f46e5', '#4338ca'
-            ];
-            return blues[Math.floor(Math.random() * blues.length)];
-        }
+- React 19 + TypeScript + Vite
+- Express 5에서 React 빌드 결과와 내부 API 제공
+- basePath: `/campaign-dashboard0-v2-4/`
+## 캘린더 Google Sheet 스냅샷
 
-        function comma(str) { return String(str).replace(/(\d)(?=(?:\d{3})+(?!\d))/g, '$1,'); }
-        function uncomma(str) { return String(str).replace(/[^\d]+/g, ''); }
-        function inputNumberFormat(obj) { obj.value = comma(uncomma(obj.value)); }
+하단 캠페인 캘린더는 Google Sheet `gid=0`을 빌드에 포함된 스냅샷으로 읽습니다. Google 접근이 가능한 Windows 환경에서 다음 명령으로 갱신합니다.
 
-        function switchMainTab(target) {
-            document.querySelectorAll('.main-tab-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(target === 'user' ? 'main-user-btn' : 'main-admin-btn').classList.add('active');
-            document.getElementById('user-section').classList.toggle('hidden', target !== 'user');
-            document.getElementById('admin-section').classList.toggle('hidden', target !== 'admin');
-            if(target === 'admin') updateAdminView();
-        }
+```powershell
+npm run sync:calendar
+```
 
-        function switchSubTab(parent, target) {
-            const section = document.getElementById(`${parent}-section`);
-            section.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
-            event.target.classList.add('active');
-            section.querySelectorAll('.sub-content').forEach(c => c.classList.add('hidden'));
-            document.getElementById(`${parent}-${target}`).classList.remove('hidden');
-            if(target === 'calendar') renderCalendar();
-        }
+이 명령은 응답 형식, `시작일` 헤더 및 데이터 존재 여부를 검증한 뒤에만 다음 파일을 원자적으로 교체합니다.
 
-        function handleApply() {
-            const name = document.getElementById('name').value;
-            const marketer = document.getElementById('marketer').value || '미지정';
-            const btn = document.getElementById('submitBtn');
-            if(!name) { alert("캠페인 명을 입력해주세요!"); return; }
+- `server/data/google-sheets/calendar.gviz`
+- `server/data/google-sheets/calendar-metadata.json`
 
-            campaigns.push({
-                id: Date.now(),
-                name: name,
-                start: document.getElementById('startDate').value,
-                end: document.getElementById('endDate').value,
-                marketer: marketer,
-                status: 'pending',
-                time: '',
-                color: getRandomBlue() // 캠페인마다 고유 색상 할당
-            });
+Express 조회 경로:
 
-            btn.classList.add('submitted'); btn.innerText = "신청 완료"; btn.disabled = true;
+- 캘린더 스냅샷: `/api/applications/sheet?gid=0`
+- 스냅샷 상태: `/api/applications/sheet/status`
 
-            setTimeout(() => {
-                btn.classList.remove('submitted'); btn.innerText = "신청하기"; btn.disabled = false;
-                document.getElementById('campaignForm').reset();
-                document.getElementById('startDate').value = today;
-                document.getElementById('endDate').value = today;
-            }, 1500);
-        }
-
-        function updateAdminView() {
-            const waitBody = document.getElementById('adminWaitList');
-            const doneBody = document.getElementById('adminDoneList');
-            waitBody.innerHTML = ''; doneBody.innerHTML = '';
-            campaigns.forEach(c => {
-                if(c.status === 'pending') {
-                    waitBody.innerHTML += `<tr><td><strong>${c.name}</strong></td><td>${c.marketer}</td><td>${c.start}~${c.end}</td>
-                        <td><div class="assign-tool"><input type="time" id="time-${c.id}" value="10:00" style="padding:5px;"><button class="btn-confirm" onclick="confirmSchedule(${c.id})">확정</button></div></td></tr>`;
-                } else {
-                    doneBody.innerHTML += `<tr><td>${c.name}</td><td>${c.time}</td><td>${c.start}~${c.end}</td><td>${c.marketer}</td></tr>`;
-                }
-            });
-        }
-
-        function confirmSchedule(id) {
-            const timeVal = document.getElementById(`time-${id}`).value;
-            const c = campaigns.find(x => x.id === id);
-            c.status = 'confirmed'; c.time = timeVal;
-            updateAdminView();
-        }
-
-        function renderCalendar() {
-            const cal = document.getElementById('calendarBody');
-            cal.innerHTML = '';
-            ['일','월','화','수','목','금','토'].forEach(d => cal.innerHTML += `<div class="cal-header">${d}</div>`);
-            
-            for(let i=1; i<=28; i++) {
-                const dateStr = `2026-02-${String(i).padStart(2, '0')}`;
-                let eventsHtml = '';
-                campaigns.filter(c => c.status === 'confirmed' && (dateStr >= c.start && dateStr <= c.end))
-                         .forEach(c => {
-                             // 캘린더 내 표시 정보: [시간] 캠페인명 (마케터) 형식의 한 줄 표기
-                             eventsHtml += `
-                                <div class="event-tag" style="background-color: ${c.color};" title="${c.time} ${c.name} (${c.marketer})">
-                                    [${c.time}] ${c.name} (${c.marketer})
-                                </div>`;
-                         });
-                cal.innerHTML += `<div class="cal-day"><small>${i}</small>${eventsHtml}</div>`;
-            }
-        }
-    </script>
-</body>
-</html>
+동기화가 실패하면 기존 정상 스냅샷은 유지됩니다. 신청·배정 데이터와 쓰기 경로는 이 동기화 대상에 포함하지 않습니다.
