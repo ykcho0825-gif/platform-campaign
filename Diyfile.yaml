@@ -5,7 +5,7 @@ metadata:
   title: campaign-dashboard0-v2-4
   annotations:
     pg.io/icon: 📊
-    playground.io/reconcile-at: 2026-09-01T14:34:47Z
+    playground.io/reconcile-at: 2026-09-01T16:16:25Z
 spec:
   lifecycle: active
   project:
